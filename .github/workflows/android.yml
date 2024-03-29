@@ -1,0 +1,81 @@
+name: Build Android TorrServer
+
+on:
+  push:
+    branches:
+      - matagi
+    paths-ignore:
+      - '**/README.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          gofiles:
+            - 'server/**'
+
+    - name: Set up Go
+      if: steps.filter.outputs.gofiles == 'true'
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.21'
+
+    - name: Install Android SDK
+      if: steps.filter.outputs.gofiles == 'true'
+      uses: android-actions/setup-android@v2
+      with:
+        sdk-version: '30'
+
+    - name: Install Android NDK
+      if: steps.filter.outputs.gofiles == 'true'
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r25b
+
+    - name: Install GoMobile
+      if: steps.filter.outputs.gofiles == 'true'
+      run: go install golang.org/x/mobile/cmd/gomobile@latest
+
+    - name: Build GoMobile app
+      if: steps.filter.outputs.gofiles == 'true'
+      run: |
+        cd server
+        go get golang.org/x/mobile/bind
+        gomobile init
+        gomobile bind -target=android -androidapi 23 -ldflags "-s -w" -o ../server.aar
+
+    - name: Commit build library
+      if: steps.filter.outputs.gofiles == 'true'
+      run: |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add server.aar
+        git add server-sources.jar
+        git commit -m "Add compiled torrserver library"
+
+    - name: Push changes
+      if: steps.filter.outputs.gofiles == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: matagi
