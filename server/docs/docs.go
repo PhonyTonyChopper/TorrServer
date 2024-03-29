@@ -62,7 +62,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Test file size (in MB)",
+                        "description": "Test file size",
                         "name": "size",
                         "in": "path",
                         "required": true
@@ -98,7 +98,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/ffp/{hash}/{id}": {
+        "/ffp": {
             "get": {
                 "description": "Gather informations using ffprobe.",
                 "produces": [
@@ -113,14 +113,14 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Torrent hash",
                         "name": "hash",
-                        "in": "path",
+                        "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
                         "description": "File index in torrent",
                         "name": "id",
-                        "in": "path",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -143,35 +143,110 @@ const docTemplate = `{
                 "summary": "Get HTML of magnet links",
                 "responses": {
                     "200": {
-                        "description": "HTML with Magnet links"
+                        "description": "Magnet links"
                     }
                 }
             }
         },
-        "/play/{hash}/{id}": {
+        "/msx": {
             "get": {
-                "description": "Play given torrent referenced by infohash and file id.",
+                "description": "Multi usage endpoint.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MSX"
+                ],
+                "summary": "Multi usage endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Magnet/hash/link to torrent",
+                        "name": "link",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data returned according to query"
+                    }
+                }
+            }
+        },
+        "/msx/imdb": {
+            "get": {
+                "description": "Get MSX IMDB informations.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MSX"
+                ],
+                "summary": "Get MSX IMDB informations",
+                "responses": {
+                    "200": {
+                        "description": "JSON MSX IMDB informations"
+                    }
+                }
+            }
+        },
+        "/msx/imdb/:id": {
+            "get": {
+                "description": "Get MSX IMDB informations.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MSX"
+                ],
+                "summary": "Get MSX IMDB informations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IMDB ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON MSX IMDB informations"
+                    }
+                }
+            }
+        },
+        "/play": {
+            "get": {
+                "description": "Play given torrent referenced by hash.",
                 "produces": [
                     "application/octet-stream"
                 ],
                 "tags": [
                     "API"
                 ],
-                "summary": "Play given torrent by infohash",
+                "summary": "Play given torrent referenced by hash",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Torrent infohash",
+                        "description": "Torrent hash",
                         "name": "hash",
-                        "in": "path",
+                        "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
                         "description": "File index in torrent",
                         "name": "id",
-                        "in": "path",
+                        "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Not authenticated",
+                        "name": "not_auth",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -283,7 +358,7 @@ const docTemplate = `{
                 "summary": "Get / Set server settings",
                 "parameters": [
                     {
-                        "description": "Settings request. Available params for action: get, set, def",
+                        "description": "Settings request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -294,7 +369,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Settings JSON or nothing. Depends on what action has been asked.",
+                        "description": "Depends on what action has been asked",
                         "schema": {
                             "$ref": "#/definitions/settings.BTSets"
                         }
@@ -318,162 +393,17 @@ const docTemplate = `{
         },
         "/stat": {
             "get": {
-                "description": "Show server and torrents statistics.",
+                "description": "Stat server.",
                 "produces": [
                     "text/plain"
                 ],
                 "tags": [
                     "Pages"
                 ],
-                "summary": "TorrServer Statistics",
+                "summary": "Stat server",
                 "responses": {
                     "200": {
-                        "description": "TorrServer statistics"
-                    }
-                }
-            }
-        },
-        "/storage/settings": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Retrieves the current storage preferences for settings and viewed history",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API"
-                ],
-                "summary": "Get storage configuration settings",
-                "responses": {
-                    "200": {
-                        "description": "Storage preferences",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Updates the storage preferences for settings and viewed history. Requires application restart for changes to take effect.",
-                "consumes": [
-                    "application/json",
-                    "application/x-www-form-urlencoded"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API"
-                ],
-                "summary": "Update storage configuration settings",
-                "parameters": [
-                    {
-                        "description": "Storage preferences to update",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    {
-                        "enum": [
-                            "json",
-                            "bbolt"
-                        ],
-                        "type": "string",
-                        "description": "Settings storage type",
-                        "name": "settings",
-                        "in": "formData"
-                    },
-                    {
-                        "enum": [
-                            "json",
-                            "bbolt"
-                        ],
-                        "type": "string",
-                        "description": "Viewed history storage type",
-                        "name": "viewed",
-                        "in": "formData"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Update successful",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input data",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Read-only mode",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Stats"
                     }
                 }
             }
@@ -528,7 +458,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Get M3U from last played file",
+                        "description": "Get m3u from last play",
                         "name": "fromlast",
                         "in": "query"
                     },
@@ -542,44 +472,27 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Set title of torrent",
                         "name": "title",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File index in torrent",
+                        "name": "poster",
+                        "in": "query",
+                        "required": true
                     },
                     {
                         "type": "string",
                         "description": "Set poster link of torrent",
-                        "name": "poster",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Set category of torrent, used in web: movie, tv, music, other",
-                        "name": "category",
-                        "in": "query"
+                        "name": "not_auth",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Data returned according to query"
-                    }
-                }
-            }
-        },
-        "/tmdb/settings": {
-            "get": {
-                "description": "Get TMDB API configuration",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API"
-                ],
-                "summary": "Get TMDB settings",
-                "responses": {
-                    "200": {
-                        "description": "TMDB settings",
-                        "schema": {
-                            "$ref": "#/definitions/settings.TMDBConfig"
-                        }
                     }
                 }
             }
@@ -596,7 +509,7 @@ const docTemplate = `{
                 "tags": [
                     "API"
                 ],
-                "summary": "Add .torrent file",
+                "summary": "Only one file support",
                 "parameters": [
                     {
                         "type": "file",
@@ -615,12 +528,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Torrent title",
                         "name": "title",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Torrent category",
-                        "name": "category",
                         "in": "formData"
                     },
                     {
@@ -648,7 +555,7 @@ const docTemplate = `{
         },
         "/torrents": {
             "post": {
-                "description": "Allow to list, add, remove, get, set, drop, wipe torrents on server. The action depends of what has been asked.",
+                "description": "Allow to add, get or set torrents to server. The action depends of what has been asked.",
                 "consumes": [
                     "application/json"
                 ],
@@ -661,7 +568,7 @@ const docTemplate = `{
                 "summary": "Handle torrents informations",
                 "parameters": [
                     {
-                        "description": "Torrent request. Available params for action: add, get, set, rem, list, drop, wipe. link required for add, hash required for get, set, rem, drop.",
+                        "description": "Torrent request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -673,38 +580,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
-                    }
-                }
-            }
-        },
-        "/torznab/search": {
-            "get": {
-                "description": "Makes a torznab search.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API"
-                ],
-                "summary": "Makes a torznab search",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Torznab query",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Torznab torrent search result(s)",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.TorrentDetails"
-                            }
-                        }
                     }
                 }
             }
@@ -724,7 +599,7 @@ const docTemplate = `{
                 "summary": "Set / List / Remove viewed torrents",
                 "parameters": [
                     {
-                        "description": "Viewed torrent request. Available params for action: set, rem, list",
+                        "description": "Viewed torrent request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -774,9 +649,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "action": {
-                    "type": "string"
-                },
-                "category": {
                     "type": "string"
                 },
                 "data": {
@@ -874,8 +746,7 @@ const docTemplate = `{
             "properties": {
                 "cacheSize": {
                     "description": "Cache",
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "connectionsLimit": {
                     "type": "integer"
@@ -914,16 +785,8 @@ const docTemplate = `{
                     "description": "BT Config",
                     "type": "boolean"
                 },
-                "enableProxy": {
-                    "description": "P2P Proxy",
-                    "type": "boolean"
-                },
                 "enableRutorSearch": {
                     "description": "Rutor",
-                    "type": "boolean"
-                },
-                "enableTorznabSearch": {
-                    "description": "Torznab",
                     "type": "boolean"
                 },
                 "forceEncrypt": {
@@ -940,12 +803,6 @@ const docTemplate = `{
                     "description": "in percent",
                     "type": "integer"
                 },
-                "proxyHosts": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "readerReadAHead": {
                     "description": "in percent, 5%-100%, [...S__X__E...] [S-E] not clean",
                     "type": "integer"
@@ -953,17 +810,9 @@ const docTemplate = `{
                 "removeCacheOnDrop": {
                     "type": "boolean"
                 },
-                "responsiveMode": {
-                    "description": "Reader",
-                    "type": "boolean"
-                },
                 "retrackersMode": {
                     "description": "0 - don` + "`" + `t add, 1 - add retrackers (def), 2 - remove retrackers 3 - replace retrackers",
                     "type": "integer"
-                },
-                "showFSActiveTorr": {
-                    "description": "FS",
-                    "type": "boolean"
                 },
                 "sslCert": {
                     "type": "string"
@@ -975,33 +824,12 @@ const docTemplate = `{
                     "description": "HTTPS",
                     "type": "integer"
                 },
-                "storeSettingsInJson": {
-                    "description": "Storage preferences",
-                    "type": "boolean"
-                },
-                "storeViewedInJson": {
-                    "type": "boolean"
-                },
-                "tmdbsettings": {
-                    "description": "TMDB",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/settings.TMDBConfig"
-                        }
-                    ]
-                },
                 "torrentDisconnectTimeout": {
                     "description": "in seconds",
                     "type": "integer"
                 },
                 "torrentsSavePath": {
                     "type": "string"
-                },
-                "torznabUrls": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/settings.TorznabConfig"
-                    }
                 },
                 "uploadRateLimit": {
                     "description": "in kb, 0 - inf",
@@ -1010,41 +838,6 @@ const docTemplate = `{
                 "useDisk": {
                     "description": "Disk",
                     "type": "boolean"
-                }
-            }
-        },
-        "settings.TMDBConfig": {
-            "type": "object",
-            "properties": {
-                "apikey": {
-                    "description": "TMDB API Key",
-                    "type": "string"
-                },
-                "apiurl": {
-                    "description": "Base API URL (default: https://api.themoviedb.org)",
-                    "type": "string"
-                },
-                "imageURL": {
-                    "description": "Image URL (default: https://image.tmdb.org)",
-                    "type": "string"
-                },
-                "imageURLRu": {
-                    "description": "Image URL for Russian users (default: https://imagetmdb.com)",
-                    "type": "string"
-                }
-            }
-        },
-        "settings.TorznabConfig": {
-            "type": "object",
-            "properties": {
-                "host": {
-                    "type": "string"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
                 }
             }
         },
@@ -1063,12 +856,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "capacity": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "filled": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "hash": {
                     "type": "string"
@@ -1083,8 +874,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "piecesLength": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "readers": {
                     "type": "array",
@@ -1107,15 +897,13 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "length": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "priority": {
                     "type": "integer"
                 },
                 "size": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 }
             }
         },
@@ -1189,9 +977,6 @@ const docTemplate = `{
                 },
                 "bytes_written_data": {
                     "type": "integer"
-                },
-                "category": {
-                    "type": "string"
                 },
                 "chunks_read": {
                     "type": "integer"
@@ -1267,9 +1052,6 @@ const docTemplate = `{
                 },
                 "torrent_size": {
                     "type": "integer"
-                },
-                "torrs_hash": {
-                    "type": "string"
                 },
                 "total_peers": {
                     "type": "integer"

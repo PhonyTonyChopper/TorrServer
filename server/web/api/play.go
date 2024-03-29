@@ -14,24 +14,25 @@ import (
 
 // play godoc
 //
-//	@Summary		Play given torrent by infohash
-//	@Description	Play given torrent referenced by infohash and file id.
+//	@Summary		Play given torrent referenced by hash
+//	@Description	Play given torrent referenced by hash.
 //
 //	@Tags			API
 //
-//	@Param			hash		path	string	true	"Torrent infohash"
-//	@Param			id			path	string	true	"File index in torrent"
+//	@Param			hash		query	string	true	"Torrent hash"
+//	@Param			id			query	string	true	"File index in torrent"
+//	@Param			not_auth	query	bool	false	"Not authenticated"
 //
 //	@Produce		application/octet-stream
 //	@Success		200	"Torrent data"
-//	@Router			/play/{hash}/{id} [get]
+//	@Router			/play [get]
 func play(c *gin.Context) {
 	hash := c.Param("hash")
 	indexStr := c.Param("id")
-	notAuth := c.GetBool("auth_required") && c.GetString(gin.AuthUserKey) == ""
+	notAuth := c.GetBool("not_auth")
 
 	if hash == "" || indexStr == "" {
-		c.AbortWithError(http.StatusNotFound, errors.New("no infohash or file index in link"))
+		c.AbortWithError(http.StatusNotFound, errors.New("link should not be empty"))
 		return
 	}
 
@@ -54,7 +55,7 @@ func play(c *gin.Context) {
 	}
 
 	if tor.Stat == state.TorrentInDB {
-		tor, err = torr.AddTorrent(spec, tor.Title, tor.Poster, tor.Data, tor.Category)
+		tor, err = torr.AddTorrent(spec, tor.Title, tor.Poster, tor.Data)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -62,7 +63,7 @@ func play(c *gin.Context) {
 	}
 
 	if !tor.GotInfo() {
-		c.AbortWithError(http.StatusInternalServerError, errors.New("torrent connection timeout"))
+		c.AbortWithError(http.StatusInternalServerError, errors.New("timeout connection torrent"))
 		return
 	}
 
@@ -77,7 +78,7 @@ func play(c *gin.Context) {
 		}
 	}
 	if index == -1 { // if file index not set and play file exec
-		c.AbortWithError(http.StatusBadRequest, errors.New("file \"index\" is wrong"))
+		c.AbortWithError(http.StatusBadRequest, errors.New("\"index\" is wrong"))
 		return
 	}
 

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"unsafe"
 
 	"github.com/gin-gonic/gin"
@@ -14,15 +16,15 @@ import (
 	"server/settings"
 )
 
-func SetupAuth(engine *gin.Engine) {
+func SetupAuth(engine *gin.Engine) *gin.RouterGroup {
 	if !settings.HttpAuth {
-		return
+		return nil
 	}
 	accs := getAccounts()
 	if accs == nil {
-		return
+		return nil
 	}
-	engine.Use(BasicAuth(accs))
+	return engine.Group("/", BasicAuth(accs))
 }
 
 func getAccounts() gin.Accounts {
@@ -59,27 +61,21 @@ func (a authPairs) searchCredential(authValue string) (string, bool) {
 func BasicAuth(accounts gin.Accounts) gin.HandlerFunc {
 	pairs := processAccounts(accounts)
 	return func(c *gin.Context) {
-		c.Set("auth_required", true)
-
 		user, found := pairs.searchCredential(c.Request.Header.Get("Authorization"))
-		if found {
-			c.Set(gin.AuthUserKey, user)
-		}
-	}
-}
-
-func CheckAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !settings.HttpAuth {
+		if !found { // always accessible
+			if strings.HasPrefix(c.FullPath(), "/stream") ||
+				c.FullPath() == "/site.webmanifest" ||
+				// https://github.com/YouROK/TorrServer/issues/172
+				(strings.HasPrefix(c.FullPath(), "/play") && c.FullPath() != "/playlistall/all.m3u") ||
+				(settings.SearchWA && strings.HasPrefix(c.FullPath(), "/search")) {
+				c.Set("not_auth", true)
+				return
+			}
+			c.Header("WWW-Authenticate", "Basic realm=Authorization Required")
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-
-		if _, ok := c.Get(gin.AuthUserKey); ok {
-			return
-		}
-
-		c.Header("WWW-Authenticate", "Basic realm=Authorization Required")
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.Set(gin.AuthUserKey, user)
 	}
 }
 
@@ -101,5 +97,8 @@ func authorizationHeader(user, password string) string {
 }
 
 func StringToBytes(s string) (b []byte) {
-	return unsafe.Slice(unsafe.StringData(s), len(s))
+	sh := *(*reflect.StringHeader)(unsafe.Pointer(&s))
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bh.Data, bh.Len, bh.Cap = sh.Data, sh.Len, sh.Len
+	return b
 }

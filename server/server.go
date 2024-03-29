@@ -5,75 +5,71 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-
-	"server/tgbot"
+	"strings"
 
 	"server/log"
 	"server/settings"
+	"server/torr/utils"
 	"server/web"
 )
 
-func Start() {
-	settings.InitSets(settings.Args.RDB, settings.Args.SearchWA)
+func Start(pathdb, port, sslport, sslCert, sslKey string, sslEnabled, roSets, searchWA bool) {
+	settings.Path = pathdb
+	settings.InitSets(roSets, searchWA)
+	if roSets {
+		log.TLogln("Enabled Read-only DB mode!")
+	}
 	// https checks
-	if settings.Args.Ssl {
+	if sslEnabled {
 		// set settings ssl enabled
-		settings.Ssl = settings.Args.Ssl
-		if settings.Args.SslPort == "" {
+		settings.Ssl = sslEnabled
+		if sslport == "" {
 			dbSSlPort := strconv.Itoa(settings.BTsets.SslPort)
 			if dbSSlPort != "0" {
-				settings.Args.SslPort = dbSSlPort
+				sslport = dbSSlPort
 			} else {
-				settings.Args.SslPort = "8091"
+				sslport = "8091"
 			}
 		} else { // store ssl port from params to DB
-			dbSSlPort, err := strconv.Atoi(settings.Args.SslPort)
+			dbSSlPort, err := strconv.Atoi(sslport)
 			if err == nil {
 				settings.BTsets.SslPort = dbSSlPort
 			}
 		}
 		// check if ssl cert and key files exist
-		if settings.Args.SslCert != "" && settings.Args.SslKey != "" {
+		if sslCert != "" && sslKey != "" {
 			// set settings ssl cert and key files
-			settings.BTsets.SslCert = settings.Args.SslCert
-			settings.BTsets.SslKey = settings.Args.SslKey
+			settings.BTsets.SslCert = sslCert
+			settings.BTsets.SslKey = sslKey
 		}
-		log.TLogln("Check web ssl port", settings.Args.SslPort)
-		l, err := net.Listen("tcp", settings.Args.IP+":"+settings.Args.SslPort)
+		log.TLogln("Check web ssl port", sslport)
+		l, err := net.Listen("tcp", ":"+sslport)
 		if l != nil {
 			l.Close()
 		}
 		if err != nil {
-			log.TLogln("Port", settings.Args.SslPort, "already in use! Please set different ssl port for HTTPS. Abort")
+			log.TLogln("Port", sslport, "already in use! Please set different port for HTTPS. Abort")
 			os.Exit(1)
 		}
 	}
 	// http checks
-	if settings.Args.Port == "" {
-		settings.Args.Port = "8090"
+	if port == "" {
+		port = "8090"
 	}
-
-	log.TLogln("Check web port", settings.Args.Port)
-	l, err := net.Listen("tcp", settings.Args.IP+":"+settings.Args.Port)
+	log.TLogln("Check web port", port)
+	l, err := net.Listen("tcp", ":"+port)
 	if l != nil {
 		l.Close()
 	}
 	if err != nil {
-		log.TLogln("Port", settings.Args.Port, "already in use! Please set different port for HTTP. Abort")
+		log.TLogln("Port", port, "already in use! Please set different sslport for HTTP. Abort")
 		os.Exit(1)
 	}
 	// remove old disk caches
 	go cleanCache()
 	// set settings http and https ports. Start web server.
-	settings.Port = settings.Args.Port
-	settings.SslPort = settings.Args.SslPort
-	settings.IP = settings.Args.IP
-
-	if settings.Args.TGToken != "" {
-		if err := tgbot.Start(settings.Args.TGToken); err != nil {
-			log.TLogln("tg bot start failed", err)
-		}
-	}
+	settings.Port = port
+	settings.SslPort = sslport
 	web.Start()
 }
 
@@ -90,7 +86,6 @@ func cleanCache() {
 	torrs := settings.ListTorrent()
 
 	log.TLogln("Remove unused cache in dir:", settings.BTsets.TorrentsSavePath)
-	keep := map[string]bool{}
 	for _, d := range dirs {
 		if len(d.Name()) != 40 {
 			// Not a hash
@@ -98,17 +93,11 @@ func cleanCache() {
 		}
 
 		if !settings.BTsets.RemoveCacheOnDrop {
-			keep[d.Name()] = true
 			for _, t := range torrs {
-				if d.IsDir() && d.Name() == t.InfoHash.HexString() {
-					keep[d.Name()] = false
-					break
-				}
-			}
-			for hash, del := range keep {
-				if del && hash == d.Name() {
+				if d.IsDir() && d.Name() != t.InfoHash.HexString() {
 					log.TLogln("Remove unused cache:", d.Name())
 					removeAllFiles(filepath.Join(settings.BTsets.TorrentsSavePath, d.Name()))
+					break
 				}
 			}
 		} else {
@@ -143,4 +132,9 @@ func WaitServer() string {
 func Stop() {
 	web.Stop()
 	settings.CloseDB()
+}
+
+func AddTrackers(trackers string) {
+	tracks := strings.Split(trackers, ",\n")
+	utils.SetDefTrackers(tracks)
 }

@@ -2,21 +2,16 @@ package web
 
 import (
 	"net"
+	"net/http"
 	"os"
-	"server/proxy"
 	"sort"
-
-	"server/torrfs/fuse"
-	"server/torrfs/webdav"
 
 	"server/rutor"
 
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/location/v2"
+	"github.com/gin-contrib/location"
 	"github.com/gin-gonic/gin"
-	"github.com/wlynxg/anet"
 
-	"server/dlna"
 	"server/settings"
 	"server/web/msx"
 
@@ -26,7 +21,6 @@ import (
 	"server/web/api"
 	"server/web/auth"
 	"server/web/blocker"
-	"server/web/pages"
 	"server/web/sslcerts"
 
 	swaggerFiles "github.com/swaggo/files"     // swagger embed files
@@ -34,8 +28,9 @@ import (
 )
 
 var (
-	BTS      = torr.NewBTS()
-	waitChan = make(chan error)
+	BTS        = torr.NewBTS()
+	waitChan   = make(chan error)
+	httpServer *http.Server
 )
 
 //	@title			Swagger Torrserver API
@@ -52,7 +47,7 @@ var (
 // @externalDocs.url			https://swagger.io/resources/open-api/
 func Start() {
 	log.TLogln("Start TorrServer " + version.Version + " torrent " + version.GetTorrentVersion())
-	ips := GetLocalIps()
+	ips := getLocalIps()
 	if len(ips) > 0 {
 		log.TLogln("Local IPs:", ips)
 	}
@@ -69,30 +64,26 @@ func Start() {
 	// corsCfg.AllowAllOrigins = true
 	// corsCfg.AllowHeaders = []string{"*"}
 	// corsCfg.AllowMethods = []string{"*"}
+	// corsCfg.AllowPrivateNetwork = true
 	corsCfg := cors.DefaultConfig()
 	corsCfg.AllowAllOrigins = true
-	corsCfg.AllowPrivateNetwork = true
 	corsCfg.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "X-Requested-With", "Accept", "Authorization"}
 
 	route := gin.New()
 	route.Use(log.WebLogger(), blocker.Blocker(), gin.Recovery(), cors.New(corsCfg), location.Default())
-	auth.SetupAuth(route)
 
 	route.GET("/echo", echo)
 
-	api.SetupRoute(route)
-	msx.SetupRoute(route)
-	pages.SetupRoute(route)
-	if settings.Args.WebDAV {
-		webdav.MountWebDAV(route)
+	routeAuth := auth.SetupAuth(route)
+	if routeAuth != nil {
+		api.SetupRoute(routeAuth)
+		msx.SetupRoute(routeAuth)
+		//pages.SetupRoute(routeAuth)
+	} else {
+		api.SetupRoute(&route.RouterGroup)
+		msx.SetupRoute(&route.RouterGroup)
+		//pages.SetupRoute(&route.RouterGroup)
 	}
-
-	if settings.BTsets.EnableDLNA {
-		dlna.Start()
-	}
-
-	// Auto-mount FUSE filesystem if enabled
-	fuse.FuseAutoMount()
 
 	route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -114,14 +105,20 @@ func Start() {
 			settings.SetBTSets(settings.BTsets)
 		}
 		go func() {
-			log.TLogln("Start https server at", settings.IP+":"+settings.SslPort)
-			waitChan <- route.RunTLS(settings.IP+":"+settings.SslPort, settings.BTsets.SslCert, settings.BTsets.SslKey)
+			log.TLogln("Start https server at port", settings.SslPort)
+			waitChan <- route.RunTLS(":"+settings.SslPort, settings.BTsets.SslCert, settings.BTsets.SslKey)
 		}()
 	}
 
+	httpServer = &http.Server{
+		Addr:    ":" + settings.Port,
+		Handler: route,
+	}
+
 	go func() {
-		log.TLogln("Start http server at", settings.IP+":"+settings.Port)
-		waitChan <- route.Run(settings.IP + ":" + settings.Port)
+		log.TLogln("Start http server at port", settings.Port)
+		httpServer.ListenAndServe()
+		//waitChan <- route.Run(" :" + settings.Port)
 	}()
 }
 
@@ -130,12 +127,11 @@ func Wait() error {
 }
 
 func Stop() {
-	dlna.Stop()
-	// Unmount FUSE filesystem if mounted
-	fuse.FuseCleanup()
+	if httpServer != nil {
+		httpServer.Close()
+	}
 	BTS.Disconnect()
-	proxy.Stop()
-	waitChan <- nil
+	//waitChan <- nil
 }
 
 // echo godoc
@@ -152,15 +148,15 @@ func echo(c *gin.Context) {
 	c.String(200, "%v", version.Version)
 }
 
-func GetLocalIps() []string {
-	ifaces, err := anet.Interfaces()
+func getLocalIps() []string {
+	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.TLogln("Error get local IPs")
 		return nil
 	}
 	var list []string
 	for _, i := range ifaces {
-		addrs, _ := anet.InterfaceAddrsByInterface(&i)
+		addrs, _ := i.Addrs()
 		if i.Flags&net.FlagUp == net.FlagUp {
 			for _, addr := range addrs {
 				var ip net.IP

@@ -3,10 +3,10 @@ package version
 import (
 	"log"
 	"runtime/debug"
+	// "github.com/anacrolix/torrent"
 )
 
-// Version is set at build time via -ldflags "-X server/version.Version=<tag>"
-var Version = "MatriX.141"
+const Version = "MatriX.128"
 
 func GetTorrentVersion() string {
 	bi, ok := debug.ReadBuildInfo()
@@ -18,9 +18,9 @@ func GetTorrentVersion() string {
 		if dep.Path == "github.com/anacrolix/torrent" {
 			if dep.Replace != nil {
 				return dep.Replace.Version
+			} else {
+				return dep.Version
 			}
-
-			return dep.Version
 		}
 	}
 	return ""
