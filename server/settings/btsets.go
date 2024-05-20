@@ -4,25 +4,11 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
-
 	"path/filepath"
 	"strings"
 
 	"server/log"
 )
-
-type TorznabConfig struct {
-	Host string
-	Key  string
-	Name string
-}
-
-type TMDBConfig struct {
-	APIKey     string // TMDB API Key
-	APIURL     string // Base API URL (default: https://api.themoviedb.org)
-	ImageURL   string // Image URL (default: https://image.tmdb.org)
-	ImageURLRu string // Image URL for Russian users (default: https://imagetmdb.com)
-}
 
 type BTSets struct {
 	// Cache
@@ -45,16 +31,6 @@ type BTSets struct {
 	EnableDLNA   bool
 	FriendlyName string
 
-	// Rutor
-	EnableRutorSearch bool
-
-	// Torznab
-	EnableTorznabSearch bool
-	TorznabUrls         []TorznabConfig
-
-	// TMDB
-	TMDBSettings TMDBConfig
-
 	// BT Config
 	EnableIPv6        bool
 	DisableTCP        bool
@@ -67,25 +43,6 @@ type BTSets struct {
 	UploadRateLimit   int // in kb, 0 - inf
 	ConnectionsLimit  int
 	PeersListenPort   int
-
-	// HTTPS
-	SslPort int
-	SslCert string
-	SslKey  string
-
-	// Reader
-	ResponsiveMode bool // enable Responsive reader (don't wait pieceComplete)
-
-	// FS
-	ShowFSActiveTorr bool
-
-	// Storage preferences
-	StoreSettingsInJson bool
-	StoreViewedInJson   bool
-
-	// P2P Proxy
-	EnableProxy bool
-	ProxyHosts  []string
 }
 
 func (v *BTSets) String() string {
@@ -162,16 +119,6 @@ func SetDefaultConfig() {
 	sets.RetrackersMode = 1
 	sets.TorrentDisconnectTimeout = 30
 	sets.ReaderReadAHead = 95 // 95%
-	sets.ResponsiveMode = true
-	sets.ShowFSActiveTorr = true
-	sets.StoreSettingsInJson = true
-	// Set default TMDB settings
-	sets.TMDBSettings = TMDBConfig{
-		APIKey:     "",
-		APIURL:     "https://api.themoviedb.org",
-		ImageURL:   "https://image.tmdb.org",
-		ImageURLRu: "https://imagetmdb.com",
-	}
 	BTsets = sets
 	if !ReadOnly {
 		buf, err := json.Marshal(BTsets)
@@ -181,9 +128,6 @@ func SetDefaultConfig() {
 		}
 		tdb.Set("Settings", "BitTorr", buf)
 	}
-	//Proxy
-	sets.EnableProxy = false
-	sets.ProxyHosts = []string{"*themoviedb.org", "*tmdb.org", "rutor.info"}
 }
 
 func loadBTSets() {
@@ -194,19 +138,10 @@ func loadBTSets() {
 			if BTsets.ReaderReadAHead < 5 {
 				BTsets.ReaderReadAHead = 5
 			}
-			// Set default TMDB settings if missing (for existing configs)
-			if BTsets.TMDBSettings.APIURL == "" {
-				BTsets.TMDBSettings = TMDBConfig{
-					APIKey:     "",
-					APIURL:     "https://api.themoviedb.org",
-					ImageURL:   "https://image.tmdb.org",
-					ImageURLRu: "https://imagetmdb.com",
-				}
-			}
 			return
 		}
 		log.TLogln("Error unmarshal btsets", err)
 	}
-	// initialize defaults on error
+
 	SetDefaultConfig()
 }

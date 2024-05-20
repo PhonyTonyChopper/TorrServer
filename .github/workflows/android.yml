@@ -3,7 +3,7 @@ name: Build Android TorrServer
 on:
   push:
     branches:
-      - matagi
+      - kuukiyomi
     paths-ignore:
       - '**/README.md'
 
@@ -62,7 +62,8 @@ jobs:
         cd server
         go get golang.org/x/mobile/bind
         gomobile init
-        gomobile bind -target=android -androidapi 23 -ldflags "-s -w" -o ../server.aar
+        cd bindings
+        gomobile bind -target=android -androidapi 23 -ldflags "-s -w" -o ../../server.aar
 
     - name: Commit build library
       if: steps.filter.outputs.gofiles == 'true'
@@ -78,4 +79,4 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: matagi
+        branch: kuukiyomi

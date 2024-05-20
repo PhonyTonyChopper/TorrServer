@@ -67,6 +67,7 @@ type TorrentStatus struct {
 	BitRate             string      `json:"bit_rate,omitempty"`
 
 	FileStats []*TorrentFileStat `json:"file_stats,omitempty"`
+	Trackers  []string           `json:"trackers,omitempty"`
 }
 
 type TorrentFileStat struct {
