@@ -3,7 +3,7 @@ name: Build Android TorrServer
 on:
   push:
     branches:
-      - copilot/update-latest-changes
+      - kuukiyomi
     paths-ignore:
       - '**/README.md'
 
