@@ -18,9 +18,8 @@ func GetTorrentVersion() string {
 		if dep.Path == "github.com/anacrolix/torrent" {
 			if dep.Replace != nil {
 				return dep.Replace.Version
-			} else {
-				return dep.Version
 			}
+			return dep.Version
 		}
 	}
 	return ""
