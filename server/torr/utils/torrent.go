@@ -35,6 +35,10 @@ var defTrackers = []string{
 
 var loadedTrackers []string
 
+func SetDefTrackers(trackers []string) {
+	defTrackers = trackers
+}
+
 func GetTrackerFromFile() []string {
 	name := filepath.Join(settings.Path, "trackers.txt")
 	buf, err := os.ReadFile(name)

@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"server/tgbot"
 
 	"server/log"
 	"server/settings"
+	"server/torr/utils"
 	"server/web"
 )
 
@@ -143,4 +145,9 @@ func WaitServer() string {
 func Stop() {
 	web.Stop()
 	settings.CloseDB()
+}
+
+func AddTrackers(trackers string) {
+	tracks := strings.Split(trackers, ",\n")
+	utils.SetDefTrackers(tracks)
 }
