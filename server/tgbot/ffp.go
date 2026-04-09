@@ -1,12 +1,13 @@
 package tgbot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	"server/ffprobe"
 	"server/settings"
 	"server/torr"
 
@@ -53,7 +54,9 @@ func cmdFfp(c tele.Context) error {
 	}
 	link := fmt.Sprintf("%s://127.0.0.1:%s/play/%s/%d", proto, port, hash, id)
 
-	data, err := ffprobe.ProbeUrl(link)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	data, err := ffp.ProbeURL(ctx, link)
 	if err != nil {
 		return c.Send(fmt.Sprintf(tr(uid, "ffp_error"), err.Error()))
 	}

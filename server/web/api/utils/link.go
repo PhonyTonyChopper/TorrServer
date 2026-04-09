@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -11,7 +12,48 @@ import (
 
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
+	"server/torrshash"
 )
+
+func ParseFromBytes(data []byte) (*torrent.TorrentSpec, error) {
+	minfo, err := metainfo.Load(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	info, err := minfo.UnmarshalInfo()
+	if err != nil {
+		return nil, err
+	}
+	mag := minfo.Magnet(nil, &info)
+	return &torrent.TorrentSpec{
+		InfoBytes:   minfo.InfoBytes,
+		Trackers:    [][]string{mag.Trackers},
+		DisplayName: info.Name,
+		InfoHash:    minfo.HashInfoBytes(),
+	}, nil
+}
+
+func ParseTorrsHash(token string) (*torrent.TorrentSpec, *torrshash.TorrsHash, error) {
+	if strings.HasPrefix(token, "torrs://") {
+		token = strings.TrimPrefix(token, "torrs://")
+	}
+	th, err := torrshash.Unpack(token)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var trackers [][]string
+	if len(th.Trackers()) > 0 {
+		trackers = [][]string{th.Trackers()}
+	}
+
+	return &torrent.TorrentSpec{
+		InfoBytes:   nil,
+		Trackers:    trackers,
+		DisplayName: th.Title(),
+		InfoHash:    metainfo.NewHashFromHex(th.Hash),
+	}, th, nil
+}
 
 func ParseFile(file multipart.File) (*torrent.TorrentSpec, error) {
 	minfo, err := metainfo.Load(file)

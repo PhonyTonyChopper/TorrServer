@@ -96,7 +96,7 @@ func stream(c *gin.Context) {
 		data = tor.Data
 	}
 	if tor == nil || tor.Stat == state.TorrentInDB {
-		tor, err = torr.AddTorrent(spec, title, poster, data)
+		tor, err = torr.AddTorrent(spec, title, poster, data, "")
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -195,7 +195,7 @@ func streamNoAuth(c *gin.Context) {
 	data = tor.Data
 
 	if tor.Stat == state.TorrentInDB {
-		tor, err = torr.AddTorrent(spec, title, poster, data)
+		tor, err = torr.AddTorrent(spec, title, poster, data, "")
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return

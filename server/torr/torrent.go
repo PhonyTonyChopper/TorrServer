@@ -17,9 +17,10 @@ import (
 )
 
 type Torrent struct {
-	Title  string
-	Poster string
-	Data   string
+	Title    string
+	Category string
+	Poster   string
+	Data     string
 	*torrent.TorrentSpec
 
 	Stat      state.TorrentStat

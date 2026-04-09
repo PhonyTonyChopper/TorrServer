@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/anacrolix/dms/dlna"
@@ -17,6 +18,13 @@ import (
 	sets "server/settings"
 	"server/torr/state"
 )
+
+var activeStreams int32
+
+// GetActiveStreams returns the number of currently active streaming sessions.
+func GetActiveStreams() int32 {
+	return atomic.LoadInt32(&activeStreams)
+}
 
 func (t *Torrent) Stream(fileID int, req *http.Request, resp http.ResponseWriter) error {
 	if !t.GotInfo() {

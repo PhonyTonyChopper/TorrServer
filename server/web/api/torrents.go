@@ -89,7 +89,7 @@ func addTorrent(req torrReqJS, c *gin.Context) {
 		return
 	}
 
-	tor, err := torr.AddTorrent(torrSpec, req.Title, req.Poster, req.Data)
+	tor, err := torr.AddTorrent(torrSpec, req.Title, req.Poster, req.Data, "")
 	if err != nil {
 		log.TLogln("error add torrent:", err)
 		c.AbortWithError(http.StatusInternalServerError, err)
@@ -143,7 +143,7 @@ func setTorrent(req torrReqJS, c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, errors.New("hash is empty"))
 		return
 	}
-	torr.SetTorrent(req.Hash, req.Title, req.Poster, req.Data)
+	torr.SetTorrent(req.Hash, req.Title, req.Poster, "", req.Data)
 	c.Status(200)
 }
 

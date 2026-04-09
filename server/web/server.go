@@ -104,6 +104,11 @@ func echo(c *gin.Context) {
 	c.String(200, "%v", version.Version)
 }
 
+// GetLocalIps returns a sorted list of non-loopback local IP addresses.
+func GetLocalIps() []string {
+	return getLocalIps()
+}
+
 func getLocalIps() []string {
 	ifaces, err := net.Interfaces()
 	if err != nil {
