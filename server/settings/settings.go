@@ -24,10 +24,7 @@ func IsDebug() bool {
 var (
 	tdb      TorrServerDB
 	Path     string
-	IP       string
 	Port     string
-	Ssl      bool
-	SslPort  string
 	ReadOnly bool
 	HttpAuth bool
 	SearchWA bool

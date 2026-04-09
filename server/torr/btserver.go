@@ -6,15 +6,11 @@ import (
 	"log"
 	"maps"
 	"net"
-	"net/http"
-	"net/url"
-	"server/proxy"
 	"sync"
 
 	"github.com/anacrolix/publicip"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
-	"github.com/wlynxg/anet"
 
 	"server/settings"
 	"server/torr/storage/torrstor"
@@ -69,7 +65,6 @@ func (bt *BTServer) Connect() error {
 	bt.torrents = make(map[metainfo.Hash]*Torrent)
 	InitApiHelper(bt)
 
-	proxy.Start()
 	return err
 }
 
@@ -81,7 +76,6 @@ func (bt *BTServer) Disconnect() {
 		bt.client = nil
 		utils.FreeOSMemGC()
 	}
-	proxy.Stop()
 }
 
 func (bt *BTServer) configure(ctx context.Context) {
@@ -143,11 +137,6 @@ func (bt *BTServer) configure(ctx context.Context) {
 		}
 	}
 
-	// Configure proxy if enabled
-	if err := bt.configureProxy(); err != nil {
-		log.Println("Proxy configuration error:", err)
-	}
-
 	log.Println("Client config:", settings.BTsets)
 
 	var err error
@@ -191,67 +180,6 @@ func (bt *BTServer) configure(ctx context.Context) {
 	}
 }
 
-func (bt *BTServer) configureProxy() error {
-	proxyURL := settings.Args.ProxyURL
-
-	if proxyURL == "" {
-		return nil // No proxy configured
-	}
-
-	proxyMode := settings.Args.ProxyMode
-	if proxyMode == "" {
-		proxyMode = "tracker" // default
-	}
-
-	// Parse and validate proxy URL
-	parsedURL, err := url.Parse(proxyURL)
-	if err != nil {
-		return fmt.Errorf("invalid proxy URL: %w", err)
-	}
-
-	scheme := parsedURL.Scheme
-	// Validate proxy protocol
-	switch scheme {
-	case "socks5", "socks5h", "socks4", "socks4a", "http", "https":
-		// Supported protocols
-	default:
-		return fmt.Errorf("unsupported proxy protocol: %s (supported: http, https, socks4, socks4a, socks5, socks5h)", scheme)
-	}
-
-	if proxyMode == "full" {
-		log.Printf("Configuring proxy for all BitTorrent traffic: %s://%s", scheme, parsedURL.Host)
-
-		// Set ProxyURL - this will be used by anacrolix/torrent for all BitTorrent traffic
-		bt.config.ProxyURL = proxyURL
-
-		// Also set HTTPProxy explicitly for HTTP tracker requests
-		bt.config.HTTPProxy = func(req *http.Request) (*url.URL, error) {
-			return parsedURL, nil
-		}
-
-		log.Println("Proxy configured successfully for all BitTorrent connections (tracker, DHT, peers)")
-	} else if proxyMode == "peers" {
-		log.Printf("Configuring proxy for peer connections only: %s://%s", scheme, parsedURL.Host)
-
-		// Set ProxyURL for peer connections, but don't set HTTPProxy
-		// This routes DHT and peer connections through proxy, but not HTTP tracker requests
-		bt.config.ProxyURL = proxyURL
-
-		log.Println("Proxy configured successfully for peer and DHT connections only")
-	} else {
-		log.Printf("Configuring proxy for HTTP tracker requests only: %s://%s", scheme, parsedURL.Host)
-
-		// Only set HTTPProxy for tracker requests, don't set ProxyURL
-		bt.config.HTTPProxy = func(req *http.Request) (*url.URL, error) {
-			return parsedURL, nil
-		}
-
-		log.Println("Proxy configured successfully for HTTP tracker connections only")
-	}
-
-	return nil
-}
-
 func (bt *BTServer) GetTorrent(hash torrent.InfoHash) *Torrent {
 	if torr, ok := bt.torrents[hash]; ok {
 		return torr
@@ -286,13 +214,13 @@ func isPrivateIP(ip net.IP) bool {
 }
 
 func getPublicIp4() net.IP {
-	ifaces, err := anet.Interfaces()
+	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Println("Error get public IPv4")
 		return nil
 	}
 	for _, i := range ifaces {
-		addrs, _ := anet.InterfaceAddrsByInterface(&i)
+		addrs, _ := i.Addrs()
 		if i.Flags&net.FlagUp == net.FlagUp {
 			for _, addr := range addrs {
 				var ip net.IP
@@ -312,13 +240,13 @@ func getPublicIp4() net.IP {
 }
 
 func getPublicIp6() net.IP {
-	ifaces, err := anet.Interfaces()
+	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Println("Error get public IPv6")
 		return nil
 	}
 	for _, i := range ifaces {
-		addrs, _ := anet.InterfaceAddrsByInterface(&i)
+		addrs, _ := i.Addrs()
 		if i.Flags&net.FlagUp == net.FlagUp {
 			for _, addr := range addrs {
 				var ip net.IP
