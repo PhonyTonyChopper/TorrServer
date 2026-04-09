@@ -2,13 +2,10 @@ package torrServer
 
 import (
 	server "server"
-	"server/settings"
 )
 
 func StartTorrentServer(pathdb string) {
-	settings.Path = pathdb
-	settings.Args = &settings.ExecArgs{}
-	server.Start()
+	server.Start(pathdb, "", false, false)
 }
 
 func WaitTorrentServer() {
