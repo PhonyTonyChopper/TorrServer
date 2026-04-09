@@ -148,6 +148,13 @@ func Stop() {
 }
 
 func AddTrackers(trackers string) {
-	tracks := strings.Split(trackers, ",\n")
+	lines := strings.Split(trackers, "\n")
+	var tracks []string
+	for _, l := range lines {
+		l = strings.Trim(l, " ,\r")
+		if l != "" {
+			tracks = append(tracks, l)
+		}
+	}
 	utils.SetDefTrackers(tracks)
 }
