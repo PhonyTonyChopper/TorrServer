@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
-
 	"path/filepath"
 	"strings"
 
@@ -79,13 +78,13 @@ type BTSets struct {
 	// FS
 	ShowFSActiveTorr bool
 
+	// Proxy
+	EnableProxy bool
+	ProxyHosts  []string
+
 	// Storage preferences
 	StoreSettingsInJson bool
 	StoreViewedInJson   bool
-
-	// P2P Proxy
-	EnableProxy bool
-	ProxyHosts  []string
 }
 
 func (v *BTSets) String() string {
@@ -165,13 +164,14 @@ func SetDefaultConfig() {
 	sets.ResponsiveMode = true
 	sets.ShowFSActiveTorr = true
 	sets.StoreSettingsInJson = true
-	// Set default TMDB settings
 	sets.TMDBSettings = TMDBConfig{
 		APIKey:     "",
 		APIURL:     "https://api.themoviedb.org",
 		ImageURL:   "https://image.tmdb.org",
 		ImageURLRu: "https://imagetmdb.com",
 	}
+	sets.EnableProxy = false
+	sets.ProxyHosts = []string{"*themoviedb.org", "*tmdb.org", "rutor.info"}
 	BTsets = sets
 	if !ReadOnly {
 		buf, err := json.Marshal(BTsets)
@@ -181,9 +181,6 @@ func SetDefaultConfig() {
 		}
 		tdb.Set("Settings", "BitTorr", buf)
 	}
-	//Proxy
-	sets.EnableProxy = false
-	sets.ProxyHosts = []string{"*themoviedb.org", "*tmdb.org", "rutor.info"}
 }
 
 func loadBTSets() {
@@ -194,7 +191,6 @@ func loadBTSets() {
 			if BTsets.ReaderReadAHead < 5 {
 				BTsets.ReaderReadAHead = 5
 			}
-			// Set default TMDB settings if missing (for existing configs)
 			if BTsets.TMDBSettings.APIURL == "" {
 				BTsets.TMDBSettings = TMDBConfig{
 					APIKey:     "",
@@ -207,6 +203,6 @@ func loadBTSets() {
 		}
 		log.TLogln("Error unmarshal btsets", err)
 	}
-	// initialize defaults on error
+
 	SetDefaultConfig()
 }
